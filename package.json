@@ -1,0 +1,32 @@
+{
+  "name": "awsenv",
+  "version": "1.0.0",
+  "description": "Secure way to handle environment variables in Docker with AWS Parameter Store",
+  "main": "./index.js",
+  "bin": "./index.js",
+  "scripts": {
+    "build": "pkg .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/developers-vitta/awsenv.git"
+  },
+  "keywords": [
+    "aws",
+    "env",
+    "awsenv",
+    "ssm",
+    "docker"
+  ],
+  "author": "Gilson F. B. Souza <gilsonfernandesbatista@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/developers-vitta/awsenv/issues"
+  },
+  "homepage": "https://github.com/developers-vitta/awsenv#readme",
+  "dependencies": {
+    "args": "^4.0.0",
+    "aws-sdk": "^2.228.1"
+  }
+}
