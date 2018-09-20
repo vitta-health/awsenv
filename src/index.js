@@ -9,7 +9,7 @@ const {
 
 args
   .option('region', OPTION_REGION_DESCRIPTION, 'us-east-1')
-  .option('namespace', OPTION_NAMESPACE_DESCRIPTION, '/production/my-app')
+  .option('namespace', OPTION_NAMESPACE_DESCRIPTION, null)
   .option('without-exporter', OPTION_WITHOUT_EXPORTER_DESCRIPTION);
 
 const params = args.parse(process.argv, { name: 'awsenv' });
