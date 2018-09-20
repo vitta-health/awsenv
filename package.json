@@ -19,7 +19,8 @@
     "url": "https://github.com/developers-vitta/awsenv/issues"
   },
   "scripts": {
-    "build": "pkg . --out-path ./releases && sudo chmod +x ./releases/*"
+    "build": "pkg . --out-path ./releases && sudo chmod +x ./releases/*",
+    "publish": "npm publish --access public"
   },
   "devDependencies": {
     "pkg": "^4.3.4"
