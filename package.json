@@ -1,6 +1,6 @@
 {
   "name": "@vitta-health/awsenv",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Secure way to handle environment variables in Docker with AWS Parameter Store",
   "main": "./index.js",
   "bin": {
