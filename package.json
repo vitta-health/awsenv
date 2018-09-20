@@ -1,16 +1,34 @@
 {
-  "name": "awsenv",
-  "version": "1.0.0",
+  "name": "@vitta/awsenv",
+  "version": "1.0.1",
   "description": "Secure way to handle environment variables in Docker with AWS Parameter Store",
   "main": "./index.js",
-  "bin": "./index.js",
-  "scripts": {
-    "build": "pkg .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "bin": {
+    "awsenv": "./index.js"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/developers-vitta/awsenv.git"
+  },
+  "author": "@vitta",
+  "contributors": [
+    "Filipe Forattini <filipeforattini1@gmail.com> (https://github.com/filipeforattini/)",
+    "Gilson F. B. Souza <gilsonfernandesbatista@gmail.com> (https://github.com/gilsonsouzah)"
+  ],
+  "bugs": {
+    "url": "https://github.com/developers-vitta/awsenv/issues"
+  },
+  "homepage": "https://github.com/developers-vitta/awsenv#readme",
+  "scripts": {
+    "build": "pkg . --out-path ./releases && sudo chmod +x ./releases/*"
+  },
+  "devDependencies": {
+    "pkg": "^4.3.4"
+  },
+  "dependencies": {
+    "args": "^4.0.0",
+    "aws-sdk": "^2.228.1"
   },
   "keywords": [
     "aws",
@@ -18,15 +36,5 @@
     "awsenv",
     "ssm",
     "docker"
-  ],
-  "author": "Gilson F. B. Souza <gilsonfernandesbatista@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/developers-vitta/awsenv/issues"
-  },
-  "homepage": "https://github.com/developers-vitta/awsenv#readme",
-  "dependencies": {
-    "args": "^4.0.0",
-    "aws-sdk": "^2.228.1"
-  }
+  ]
 }
