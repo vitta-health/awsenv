@@ -1,6 +1,6 @@
 {
   "name": "@vitta-health/awsenv",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "description": "Secure way to handle environment variables in Docker with AWS Parameter Store",
   "main": "./index.js",
   "bin": {
@@ -18,7 +18,6 @@
   "bugs": {
     "url": "https://github.com/developers-vitta/awsenv/issues"
   },
-  "homepage": "https://github.com/developers-vitta/awsenv#readme",
   "scripts": {
     "build": "pkg . --out-path ./releases && sudo chmod +x ./releases/*"
   },
