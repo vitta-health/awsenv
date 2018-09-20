@@ -1,6 +1,6 @@
 {
   "name": "@vitta-health/awsenv",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Secure way to handle environment variables in Docker with AWS Parameter Store",
   "main": "./index.js",
   "bin": {
@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/developers-vitta/awsenv.git"
+    "url": "https://github.com/developers-vitta/awsenv.git"
   },
   "author": "Gilson F. B. Souza <gilsonfernandesbatista@gmail.com> (https://github.com/gilsonsouzah)",
   "contributors": [
