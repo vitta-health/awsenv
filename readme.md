@@ -73,3 +73,11 @@ NODE_ENV=staging
 DB_USERNAME=root
 DB_PASSWORD=mysecretpassword
 ```
+
+## Contribuiting
+
+```bash
+$ npm link
+$ awsenv version
+1.0.1
+```
