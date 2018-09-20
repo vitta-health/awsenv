@@ -76,8 +76,12 @@ DB_PASSWORD=mysecretpassword
 
 ## Contribuiting
 
+Fork-it first, and:
+
 ```bash
 $ npm link
 $ awsenv version
 1.0.1
 ```
+
+Make your magic!
