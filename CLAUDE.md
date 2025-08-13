@@ -145,14 +145,40 @@ awsenv --profile production     # Use specific AWS CLI profile
 - **Smart Namespaces**: Auto-generated Parameter Store paths like `/awsenv/app=project-name/env=production`
 
 ### Example .awsenv file
+
+#### Minimal Configuration
 ```ini
+# Simplest possible setup
 [default]
-namespace = /awsenv/app=myproject/env=production
-all_secure = true
+namespace = /production/myapp
+```
+
+#### Full Example with All Options
+```ini
+# Profile names match AWS CLI profiles in ~/.aws/credentials
+[default]
+namespace = "/production/myapp"         # Quotes are optional
+encrypt = true                          # Force all as SecureString
+paranoid = true                         # Block purge operations
+without_exporter = false                # Include 'export' prefix
 
 [staging]  
-namespace = /awsenv/app=myproject/env=staging
-all_secure = false
+namespace = /staging/myapp              # No quotes is fine
+encrypt = false
+paranoid = false
+
+[development]
+namespace = '/dev/myapp'                # Single quotes work too
+all_secure = true                       # Old name still works (→ encrypt)
+```
+
+#### Quote Handling
+```ini
+# All these formats work correctly:
+namespace = "/path/to/params"          # Double quotes
+namespace = '/path/to/params'          # Single quotes  
+namespace = /path/to/params            # No quotes
+namespace = "/path/with spaces/params" # Quotes required for spaces
 ```
 
 ## Development Standards

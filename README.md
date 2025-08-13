@@ -34,13 +34,35 @@ awsenv --sync .env -n /prod/api --all-secure # Upload encrypted
 ```
 
 ### Project Config (.awsenv/config)
+
+#### Simple Example (Most Common)
+```ini
+[default]
+namespace = /production/myapp
+```
+
+#### Multiple Environments
 ```ini
 [production]
-namespace = /awsenv/app=myproject/env=production
-all_secure = true
+namespace = "/production/myapp"     # Quotes are optional
+encrypt = true                      # Encrypt all parameters
+paranoid = true                     # Block purge operations
 
 [staging]  
-namespace = /awsenv/app=myproject/env=staging
+namespace = /staging/myapp          # Without quotes works too
+encrypt = false
+paranoid = false
+
+[development]
+namespace = '/dev/myapp'            # Single quotes also work
+```
+
+#### Backward Compatible
+```ini
+# Old settings still work
+[default]
+namespace = /prod/api
+all_secure = true                   # Old name → maps to 'encrypt'
 ```
 
 ## 📋 Examples
@@ -245,13 +267,20 @@ awsenv init  # Creates .awsenv/config in current project
 
 **Step 3: Edit .awsenv/config**
 ```ini
+# Minimal configuration - just what you need
+[default]
+namespace = /mycompany/prod
+
+# Or with multiple profiles
 [production]
-namespace = /my-company/production
-all_secure = true
+namespace = "/my-company/production"   # Quotes optional
+encrypt = true                         # Force encryption
+paranoid = true                        # Prevent accidental purge
 
 [development] 
-namespace = /my-company/development
-all_secure = false
+namespace = /my-company/development    # No quotes is fine
+encrypt = false
+paranoid = false
 ```
 
 **Step 4: Use your profiles**
