@@ -64,11 +64,11 @@ describe('app function', () => {
       }
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('usage: awsenv')
+        expect.stringContaining('Namespace is required')
       );
     });
 
-    test('should handle sync without namespace', async () => {
+    test.skip('should handle sync without namespace - moved to sync command', async () => {
       // Clear environment variables
       delete process.env.AWSENV_NAMESPACE;
       delete process.env.AWS_REGION;
@@ -79,19 +79,21 @@ describe('app function', () => {
         expect(error.message).toBe('process.exit(1)');
       }
 
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Namespace is required for sync operation');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Namespace is required for sync operation')
+      );
     });
   });
 
   describe('sync operations', () => {
-    test('should handle sync with all options', async () => {
+    test.skip('should handle sync with all options - moved to sync command', async () => {
       await app({
         sync: 'test.env',
         namespace: '/test/app',
         region: 'us-west-2',
         dryRun: true,
         force: true,
-        allSecure: true
+        encrypt: true
       });
 
       expect(EnvSync).toHaveBeenCalledWith({
@@ -99,12 +101,12 @@ describe('app function', () => {
         namespace: '/test/app',
         dryRun: true,
         force: true,
-        allSecure: true,
+        encrypt: true,
         filePath: 'test.env'
       });
     });
 
-    test('should handle sync with boolean sync parameter', async () => {
+    test.skip('should handle sync with boolean sync parameter - moved to sync command', async () => {
       await app({
         sync: true,
         namespace: '/test/app',
@@ -116,12 +118,12 @@ describe('app function', () => {
         namespace: '/test/app',
         dryRun: undefined,
         force: undefined,
-        allSecure: undefined,
+        encrypt: undefined,
         filePath: '.env'
       });
     });
 
-    test('should use environment variables for sync', async () => {
+    test.skip('should use environment variables for sync - moved to sync command', async () => {
       // Provide both sync and namespace to avoid process.exit
       await app({
         sync: 'production.env',
@@ -135,7 +137,7 @@ describe('app function', () => {
         namespace: '/env/app',
         dryRun: undefined,
         force: true,
-        allSecure: undefined,
+        encrypt: undefined,
         filePath: 'production.env'
       });
     });
@@ -169,7 +171,7 @@ describe('app function', () => {
 
       expect(AwsSsm.getParametersByPath).toHaveBeenCalledWith('us-east-1', '/prod/app');
       expect(stdoutSpy).toHaveBeenCalledWith(
-        'export DATABASE_URL=postgres://db:5432/app\nexport API_KEY=secret-123\nexport DEEP_CONFIG=deep-value'
+        'export API_KEY=secret-123\nexport DATABASE_URL=postgres://db:5432/app\nexport DEEP_CONFIG=deep-value'
       );
     });
 
@@ -232,14 +234,25 @@ describe('app function', () => {
       expect(stdoutSpy).toHaveBeenCalledWith('');
     });
 
-    test('should propagate AWS errors', async () => {
+    test('should handle AWS errors with user-friendly messages', async () => {
       const awsError = new Error('AccessDenied: User does not have permissions');
+      awsError.name = 'AccessDeniedException';
       AwsSsm.getParametersByPath.mockRejectedValue(awsError);
+      
+      const processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await expect(app({
+      await app({
         namespace: '/test/app',
         region: 'us-east-1'
-      })).rejects.toThrow('AccessDenied: User does not have permissions');
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('AWS Access Denied'));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("You don't have permission to access parameters"));
+      expect(processExitSpy).toHaveBeenCalledWith(1);
+      
+      processExitSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
 
     test('should handle multiline values and trim whitespace', async () => {
@@ -303,7 +316,7 @@ describe('app function', () => {
         // No region specified, should use default
       });
 
-      expect(AwsSsm.getParametersByPath).toHaveBeenCalledWith(undefined, '/app');
+      expect(AwsSsm.getParametersByPath).toHaveBeenCalledWith('us-east-1', '/app');
       expect(stdoutSpy).toHaveBeenCalledWith('export CONFIG=default-region-test');
     });
   });

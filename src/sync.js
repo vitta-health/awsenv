@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import pLimit from 'p-limit';
 import {
   SYNC_CANCELLED_MSG,
-  SYNC_CONFIRM_MSG,
   SYNC_DRY_RUN_MSG,
   SYNC_SUCCESS_MSG,
 } from './concerns/msgs.js';
@@ -30,17 +30,19 @@ class EnvSync {
     this.region = options.region || 'us-east-1';
     this.namespace = options.namespace;
     this.dryRun = options.dryRun || false;
-    this.force = options.force || false;
-    this.allSecure = options.allSecure || false;
+    this.encrypt = options.encrypt || false;
     this.filePath = options.filePath || '.env';
+    this.envContent = options.envContent || null;
   }
 
-  parseEnvFile(filePath) {
+  parseEnvContent(content, source = 'file') {
+    if (global.verbose) {
+      console.log(`\nParsing env ${source}`);
+    }
+    
     try {
-      const fileContent = fs.readFileSync(filePath, 'utf8');
       const envVars = {};
-      
-      const lines = fileContent.split('\n');
+      const lines = content.split('\n');
       
       for (let line of lines) {
         line = line.trim();
@@ -62,7 +64,24 @@ class EnvSync {
         }
       }
       
+      if (global.verbose) {
+        const varInfo = [`  Found ${Object.keys(envVars).length} variables:`];
+        Object.keys(envVars).sort().forEach(key => {
+          varInfo.push(`    - ${key}`);
+        });
+        console.log(varInfo.join('\n'));
+      }
+      
       return envVars;
+    } catch (error) {
+      throw new Error(`Failed to parse env content: ${error.message}`);
+    }
+  }
+
+  parseEnvFile(filePath) {
+    try {
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      return this.parseEnvContent(fileContent, `file: ${filePath}`);
     } catch (error) {
       throw new Error(`Failed to read .env file: ${error.message}`);
     }
@@ -72,8 +91,8 @@ class EnvSync {
    * Determine if a variable should be stored as SecureString
    */
   isSecret(key, value) {
-    // If allSecure flag is set, treat everything as secret
-    if (this.allSecure) {
+    // If encrypt flag is set, treat everything as secret
+    if (this.encrypt) {
       return true;
     }
     
@@ -105,9 +124,21 @@ class EnvSync {
   prepareParameters(envVars) {
     const parameters = [];
     
+    const verboseParams = global.verbose ? ['', 'Preparing parameters for AWS:'] : null;
+    
     for (const [key, value] of Object.entries(envVars)) {
       const parameterPath = this.createParameterPath(key);
       const isSecure = this.isSecret(key, value);
+      
+      if (global.verbose) {
+        verboseParams.push(`  ${key}:`);
+        verboseParams.push(`    Path: ${parameterPath}`);
+        verboseParams.push(`    Type: ${isSecure ? 'SecureString (encrypted)' : 'String (plain text)'}`);
+        if (isSecure && !this.encrypt) {
+          const reason = SECRET_PATTERNS.some(pattern => pattern.test(key)) ? 'key pattern match' : 'value pattern match';
+          verboseParams.push(`    Reason: ${reason}`);
+        }
+      }
       
       parameters.push({
         Name: parameterPath,
@@ -116,6 +147,10 @@ class EnvSync {
         Overwrite: true,
         Description: `Environment variable ${key} synced from .env file`,
       });
+    }
+    
+    if (verboseParams) {
+      console.log(verboseParams.join('\n'));
     }
     
     return parameters;
@@ -128,50 +163,116 @@ class EnvSync {
     // Dry run display removed
   }
 
-  /**
-   * Ask for user confirmation
-   */
-  async askConfirmation() {
-    if (this.force) {
-      return true;
-    }
-
-    return new Promise(async (resolve) => {
-      const { createInterface } = await import('readline');
-      const rl = createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-
-      rl.question(SYNC_CONFIRM_MSG + ' ', (answer) => {
-        rl.close();
-        resolve(answer.toLowerCase().startsWith('y'));
-      });
-    });
-  }
 
   /**
    * Upload parameters to AWS Parameter Store
    */
   async uploadParameters(parameters) {
-    const results = [];
+    // Create concurrency limiter - 3 parallel requests (safe for AWS rate limits)
+    const limit = pLimit(3);
     
-    for (const param of parameters) {
-      try {
-        await AwsSsm.putParameter(this.region, param);
-        results.push({ success: true, parameter: param.Name });
-        process.stdout.write('✅ ');
-      } catch (error) {
-        results.push({ 
-          success: false, 
-          parameter: param.Name, 
-          error: error.message 
-        });
-        process.stdout.write('❌ ');
-      }
+    if (global.verbose) {
+      const info = [
+        '',
+        `Uploading ${parameters.length} parameters with concurrency: 3`
+      ];
+      console.log(info.join('\n'));
     }
     
-    // Progress completed silently
+    // Create promises for all uploads with concurrency control
+    const uploadPromises = parameters.map((param, index) => 
+      limit(async () => {
+        try {
+          // Add small delay to avoid rate limiting (50ms between requests)
+          if (index > 0) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          await AwsSsm.putParameter(this.region, param);
+          process.stdout.write('.');
+          return { success: true, parameter: param.Name };
+        } catch (error) {
+          // Handle specific AWS authentication errors
+          if (error.name === 'UnrecognizedClientException' || 
+              error.name === 'InvalidClientTokenId' ||
+              error.message?.includes('security token') ||
+              error.message?.includes('invalid')) {
+            console.error([
+              '',
+              '❌ AWS Authentication Error',
+              '',
+              'Your AWS credentials are invalid or expired.',
+              '',
+              'Possible solutions:',
+              '  1. Configure AWS credentials: aws configure',
+              '  2. Use a valid AWS profile: awsenv --profile <profile-name>',
+              '  3. Set environment variables:',
+              '     export AWS_ACCESS_KEY_ID=<your-key>',
+              '     export AWS_SECRET_ACCESS_KEY=<your-secret>',
+              '  4. If using temporary credentials, refresh them',
+              '',
+              '💡 Fix: Run "aws configure" or "awsenv --profile <name>" with valid credentials',
+              ''
+            ].join('\n'));
+            process.exit(1);
+          }
+          
+          // Handle expired token errors
+          if (error.name === 'ExpiredToken' || 
+              error.name === 'ExpiredTokenException' ||
+              error.message?.includes('expired')) {
+            console.error([
+              '',
+              '❌ AWS Token Expired',
+              '',
+              'Your AWS session token has expired.',
+              '',
+              'Please refresh your credentials:',
+              '  • If using SSO: aws sso login --profile <profile-name>',
+              '  • If using temporary credentials: obtain new ones',
+              '  • If using IAM user: check if credentials are still valid',
+              '',
+              '💡 Fix: Run "aws sso login --profile <profile-name>" to refresh your session',
+              ''
+            ].join('\n'));
+            process.exit(1);
+          }
+          
+          // Handle access denied errors
+          if (error.name === 'AccessDeniedException' || 
+              error.name === 'UnauthorizedException' ||
+              error.message?.includes('not authorized')) {
+            console.error([
+              '',
+              '❌ AWS Access Denied',
+              '',
+              `You don't have permission to write parameters at: ${param.Name}`,
+              '',
+              'Required permissions:',
+              '  • ssm:PutParameter',
+              '  • kms:Encrypt (for SecureString parameters)',
+              '',
+              '💡 Fix: Ask your AWS administrator to grant the above permissions to your user/role',
+              ''
+            ].join('\n'));
+            process.exit(1);
+          }
+          
+          process.stdout.write('x');
+          return { 
+            success: false, 
+            parameter: param.Name, 
+            error: error.message 
+          };
+        }
+      })
+    );
+    
+    // Wait for all uploads to complete
+    const results = await Promise.all(uploadPromises);
+    
+    // Add newline after progress dots
+    console.log('');
+    
     return results;
   }
 
@@ -185,13 +286,21 @@ class EnvSync {
         throw new Error('Namespace is required for sync operation');
       }
 
-      if (!fs.existsSync(this.filePath)) {
-        throw new Error(`File not found: ${this.filePath}`);
+      // Parse environment variables
+      let envVars;
+      
+      if (this.envContent) {
+        // Parse from stdin content
+        envVars = this.parseEnvContent(this.envContent, 'stdin');
+      } else {
+        // Check if file exists
+        if (!fs.existsSync(this.filePath)) {
+          throw new Error(`File not found: ${this.filePath}`);
+        }
+        
+        // Parse from file
+        envVars = this.parseEnvFile(this.filePath);
       }
-
-      // Parse .env file
-      // Reading environment file silently
-      const envVars = this.parseEnvFile(this.filePath);
       
       if (Object.keys(envVars).length === 0) {
         // No environment variables found
@@ -210,14 +319,7 @@ class EnvSync {
         return;
       }
 
-      // Ask for confirmation
-      const confirmed = await this.askConfirmation();
-      if (!confirmed) {
-        // Sync cancelled silently
-        return;
-      }
-
-      // Upload parameters
+      // Upload parameters directly without confirmation
       // Syncing parameters silently
 
       const results = await this.uploadParameters(parameters);
@@ -226,10 +328,42 @@ class EnvSync {
       const successful = results.filter(r => r.success).length;
       const failed = results.filter(r => !r.success).length;
       
-      // Sync results processed silently
+      if (failed > 0) {
+        console.error([
+          '',
+          `⚠️  Sync completed with errors:`,
+          `  ✅ Success: ${successful} parameters`,
+          `  ❌ Failed: ${failed} parameters`,
+          ''
+        ].join('\n'));
+        
+        // Show which parameters failed
+        const failedParams = results.filter(r => !r.success);
+        console.error('Failed parameters:');
+        failedParams.forEach(p => {
+          console.error(`  - ${p.parameter}: ${p.error}`);
+        });
+        console.error('');
+        process.exit(1);
+      } else {
+        console.log([
+          '',
+          `✅ Sync completed successfully:`,
+          `  Uploaded: ${successful} parameters`,
+          ''
+        ].join('\n'));
+      }
 
     } catch (error) {
-      console.error(`❌ Sync failed: ${error.message}`);
+      console.error([
+        '',
+        '❌ Sync failed',
+        '',
+        `Error: ${error.message}`,
+        '',
+        '💡 Fix: Check the error message above and correct the issue',
+        ''
+      ].join('\n'));
       process.exit(1);
     }
   }

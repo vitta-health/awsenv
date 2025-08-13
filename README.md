@@ -54,9 +54,9 @@ awsenv -r us-west-2 -n /global/config # Specific region
 
 ### Sync to Parameter Store
 ```bash
-awsenv --sync .env -n /prod/api --dry-run     # Preview changes
-awsenv --sync .env -n /prod/api --all-secure  # Force all encrypted
-awsenv --sync prod.env -n /prod/api --force   # Skip confirmations
+awsenv sync -f .env -n /prod/api --dry-run    # Preview changes
+awsenv sync -f .env -n /prod/api --encrypt    # Force all encrypted
+awsenv sync -f prod.env -n /prod/api          # Direct upload, no confirmation
 ```
 
 ### Docker Integration
@@ -163,11 +163,11 @@ $(awsenv -n /prod/payments-api) && kubectl apply -f k8s/
 ### Compliance & Security
 ```bash
 # Sync with all secrets encrypted for compliance
-awsenv --sync .env.prod -n /fintech/prod/core --all-secure
+awsenv sync -f .env.prod -n /fintech/prod/core --encrypt
 
 # HIPAA-compliant deployment
 export AWS_PROFILE=hipaa-compliant
-awsenv -n /healthcare/prod/patient-api --all-secure
+awsenv -n /healthcare/prod/patient-api
 ```
 
 ## 🔄 **Bi-Directional Sync: Push & Pull**
@@ -205,10 +205,11 @@ awsenv -n /namespace > .env             # Export to file
 awsenv --sync .env -n /namespace        # Push secrets to AWS
 
 # Power User Options
---all-secure                            # Force encrypt everything
---dry-run                               # Preview changes  
---force                                 # Overwrite existing
---without-exporter                      # Skip "export" prefix
+--encrypt, -e                           # Force encrypt everything
+--paranoid                              # Block destructive operations
+--dry-run, -d                          # Preview changes  
+--without-exporter, -w                  # Skip "export" prefix
+--verbose, -v                           # Show detailed execution info
 ```
 
 ## 🔧 **Project Configuration**
@@ -277,10 +278,9 @@ awsenv --profile production     # ← Uses specific profile
 | `--region` | `-r` | AWS region for SSM parameters | `us-east-1` |
 | `--namespace` | `-n` | Parameter Store path prefix | *required* |
 | `--without-exporter` | `-w` | Output without `export` prefix | `false` |
-| `--sync` | `-s` | Sync .env file to Parameter Store | |
 | `--dry-run` | `-d` | Show what would be synced (no upload) | `false` |
-| `--force` | `-f` | Overwrite existing parameters | `false` |
-| `--all-secure` | `-a` | **Force ALL parameters as SecureString** | `false` |
+| `--encrypt` | `-e` | **Force ALL parameters as SecureString** | `false` |
+| `--paranoid` | | Block destructive operations (purge) | `false` |
 | `--help` | `-h` | Show help information | |
 | `--version` | `-v` | Show version number | |
 

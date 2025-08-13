@@ -130,14 +130,14 @@ describe('index.js CLI entry point logic', () => {
       sync: '.env',
       dryRun: false,
       force: true,
-      allSecure: false
+      encrypt: false
     };
     
     // Verify all expected properties exist
     expect(mockParsedParams).toHaveProperty('region');
     expect(mockParsedParams).toHaveProperty('namespace');
     expect(mockParsedParams).toHaveProperty('sync');
-    expect(mockParsedParams).toHaveProperty('allSecure');
+    expect(mockParsedParams).toHaveProperty('encrypt');
     
     // Verify types
     expect(typeof mockParsedParams.region).toBe('string');

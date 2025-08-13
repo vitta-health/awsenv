@@ -129,7 +129,7 @@ aws_access_key_id = AKIA456
 region = us-west-2`;
     const awsenvContent = `[production]
 namespace = /company/prod
-all_secure = true`;
+encrypt = true`;
     
     vi.mocked(fs.existsSync).mockImplementation((path) => {
       return path && (path.includes('credentials') || (path.includes('.awsenv') && path.includes('/project/')));
@@ -144,7 +144,7 @@ all_secure = true`;
     const result = applyProfile({}, 'production');
     expect(result.region).toBe('us-west-2');
     expect(result.namespace).toBe('/company/prod');
-    expect(result.allSecure).toBe(true);
+    expect(result.encrypt).toBe(true);
   });
 
   test('should throw error for non-existent AWS CLI profile', () => {
@@ -214,14 +214,15 @@ region = us-west-2`;
   test('should create smart AWSENV config with auto-generated namespaces', () => {
     createExampleConfig();
     
-    expect(fs.mkdirSync).toHaveBeenCalledWith('/project/.awsenv', { recursive: true });
+    // mkdirSync should not be called anymore since we don't create a directory
+    expect(fs.mkdirSync).not.toHaveBeenCalled();
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      '/project/.awsenv/config',
-      expect.stringContaining('# Auto-generated configuration for: project')
+      '/project/.awsenv',
+      expect.stringContaining('# Auto-generated for: project')
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      '/project/.awsenv/config',
-      expect.stringContaining('namespace = /awsenv/app=project/env=production')
+      '/project/.awsenv',
+      expect.stringContaining('namespace = /envstore/app_project/env_production')
     );
     // Console output tests removed since console.log statements were removed
   });

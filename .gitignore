@@ -12,4 +12,9 @@ quick-test.js
 *.test.disabled
 
 # Local configuration
-.awsenv/
+.awsenv
+
+# Build artifacts
+dist/
+releases/
+*.tar.gz

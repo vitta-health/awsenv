@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 // Internal modules
 import {
   DEFAULT_ERROR_MSG,
-  OPTION_ALL_SECURE_DESCRIPTION,
+  OPTION_ENCRYPT_DESCRIPTION,
   OPTION_DRY_RUN_DESCRIPTION,
   OPTION_FORCE_DESCRIPTION,
   OPTION_NAMESPACE_DESCRIPTION,
@@ -27,7 +27,7 @@ describe('msgs', () => {
     expect(OPTION_SYNC_DESCRIPTION).toBeDefined();
     expect(OPTION_DRY_RUN_DESCRIPTION).toBeDefined();
     expect(OPTION_FORCE_DESCRIPTION).toBeDefined();
-    expect(OPTION_ALL_SECURE_DESCRIPTION).toBeDefined();
+    expect(OPTION_ENCRYPT_DESCRIPTION).toBeDefined();
     expect(OPTION_PROFILE_DESCRIPTION).toBeDefined();
     expect(DEFAULT_ERROR_MSG).toBeDefined();
     expect(SYNC_SUCCESS_MSG).toBeDefined();
@@ -40,7 +40,7 @@ describe('msgs', () => {
     expect(OPTION_NAMESPACE_DESCRIPTION).toContain('Prefix for your parameters path');
     expect(OPTION_REGION_DESCRIPTION).toContain('AWS region for SSM parameters');
     expect(OPTION_WITHOUT_EXPORTER_DESCRIPTION).toContain('Hides command export');
-    expect(DEFAULT_ERROR_MSG).toContain('usage: awsenv [options]');
+    expect(DEFAULT_ERROR_MSG).toContain('Namespace is required');
   });
 
   test('should have correct message content for new sync options', () => {
@@ -63,7 +63,7 @@ describe('msgs', () => {
     expect(typeof OPTION_SYNC_DESCRIPTION).toBe('string');
     expect(typeof OPTION_DRY_RUN_DESCRIPTION).toBe('string');
     expect(typeof OPTION_FORCE_DESCRIPTION).toBe('string');
-    expect(typeof OPTION_ALL_SECURE_DESCRIPTION).toBe('string');
+    expect(typeof OPTION_ENCRYPT_DESCRIPTION).toBe('string');
     expect(typeof OPTION_PROFILE_DESCRIPTION).toBe('string');
     expect(typeof DEFAULT_ERROR_MSG).toBe('string');
     expect(typeof SYNC_SUCCESS_MSG).toBe('string');

@@ -59,7 +59,7 @@ describe('EnvSync class', () => {
       namespace: '/test/app',
       dryRun: true,
       force: true,
-      allSecure: true,
+      encrypt: true,
       filePath: 'custom.env'
     };
     const envSync = new EnvSync(options);
@@ -68,7 +68,7 @@ describe('EnvSync class', () => {
     expect(envSync.namespace).toBe('/test/app');
     expect(envSync.dryRun).toBe(true);
     expect(envSync.force).toBe(true);
-    expect(envSync.allSecure).toBe(true);
+    expect(envSync.encrypt).toBe(true);
     expect(envSync.filePath).toBe('custom.env');
   });
 
@@ -215,8 +215,8 @@ PORT=3000`;
   });
 
 
-  test('should treat all variables as secrets when allSecure is enabled', () => {
-    const envSync = new EnvSync({ allSecure: true });
+  test('should treat all variables as secrets when encrypt is enabled', () => {
+    const envSync = new EnvSync({ encrypt: true });
     
     // Even non-secret looking keys should be treated as secrets
     expect(envSync.isSecret('NODE_ENV', 'production')).toBe(true);
@@ -225,10 +225,10 @@ PORT=3000`;
     expect(envSync.isSecret('APP_NAME', 'MyApp')).toBe(true);
   });
 
-  test('should prepare all parameters as SecureString when allSecure is enabled', () => {
+  test('should prepare all parameters as SecureString when encrypt is enabled', () => {
     const envSync = new EnvSync({ 
       namespace: '/test/app',
-      allSecure: true 
+      encrypt: true 
     });
     
     const envVars = {
@@ -240,7 +240,7 @@ PORT=3000`;
     const result = envSync.prepareParameters(envVars);
     
     expect(result).toHaveLength(3);
-    // All should be SecureString when allSecure is enabled
+    // All should be SecureString when encrypt is enabled
     expect(result[0].Type).toBe('SecureString');
     expect(result[1].Type).toBe('SecureString'); 
     expect(result[2].Type).toBe('SecureString');
@@ -347,7 +347,7 @@ SPACES=" spaced value "`;
       });
 
       expect(AwsSsm.putParameter).toHaveBeenCalledTimes(2);
-      expect(stdoutSpy).toHaveBeenCalledWith('✅ ');
+      expect(stdoutSpy).toHaveBeenCalledWith('.');
 
       stdoutSpy.mockRestore();
       consoleSpy.mockRestore();
@@ -393,8 +393,8 @@ SPACES=" spaced value "`;
         error: 'Parameter already exists'
       });
 
-      expect(stdoutSpy).toHaveBeenCalledWith('✅ ');
-      expect(stdoutSpy).toHaveBeenCalledWith('❌ ');
+      expect(stdoutSpy).toHaveBeenCalledWith('.');
+      expect(stdoutSpy).toHaveBeenCalledWith('x');
 
       stdoutSpy.mockRestore();
       consoleSpy.mockRestore();

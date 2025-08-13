@@ -127,10 +127,10 @@ The tool expects AWS credentials to be configured via standard AWS methods (IAM 
 AWSENV integrates with AWS CLI profiles for seamless credential and configuration management:
 
 ### Profile Detection and Auto-Config
-- **Zero-Config Magic**: Automatically detects `.awsenv/config` and uses `default` profile
+- **Zero-Config Magic**: Automatically detects `.awsenv` file and uses `default` profile
 - **AWS CLI Integration**: Reads from `~/.aws/credentials` and `~/.aws/config` 
 - **Project-Level Settings**: Extends AWS profiles with AWSENV-specific config
-- **Monorepo Support**: Searches parent directories for `.awsenv/config`
+- **Monorepo Support**: Searches parent directories for `.awsenv` file
 
 ### Profile Commands
 ```bash
@@ -141,10 +141,10 @@ awsenv --profile production     # Use specific AWS CLI profile
 
 ### Configuration Structure
 - **AWS CLI Files**: Standard `~/.aws/credentials` and `~/.aws/config`
-- **AWSENV Config**: Project-level `.awsenv/config` with profile extensions
+- **AWSENV Config**: Project-level `.awsenv` file with profile extensions
 - **Smart Namespaces**: Auto-generated Parameter Store paths like `/awsenv/app=project-name/env=production`
 
-### Example .awsenv/config
+### Example .awsenv file
 ```ini
 [default]
 namespace = /awsenv/app=myproject/env=production

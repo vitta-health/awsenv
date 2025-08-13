@@ -1,4 +1,5 @@
 import { 
+  DeleteParameterCommand,
   GetParametersByPathCommand,
   PutParameterCommand,
   SSMClient, 
@@ -50,5 +51,20 @@ export default class AwsSsm {
         )
       )
     );
+  }
+
+  static async deleteParameter(region = 'us-east-1', name) {
+    const client = new SSMClient({ region });
+    
+    const command = new DeleteParameterCommand({
+      Name: name
+    });
+
+    try {
+      const response = await client.send(command);
+      return response;
+    } catch (error) {
+      throw error;
+    }
   }
 }
