@@ -1,58 +1,68 @@
 # 🚀 AWSENV
 
-<div align="center">
-  
-**Enterprise-grade secret management for modern applications**
+Secure AWS Parameter Store integration with zero-config magic.
 
-[![Coverage](https://img.shields.io/badge/coverage-96.6%25-brightgreen)](.) [![AWS SDK v3](https://img.shields.io/badge/AWS-SDK%20v3-orange)](.) [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](.) [![Enterprise](https://img.shields.io/badge/Enterprise-Ready-purple)](.)
+[![Coverage](https://img.shields.io/badge/coverage-96.6%25-brightgreen)](.) [![AWS SDK v3](https://img.shields.io/badge/AWS-SDK%20v3-orange)](.) [![Tests](https://img.shields.io/badge/tests-98%20passing-green)](.)
 
-*Trusted by startups to Fortune 500 companies for secure environment variable management*
-
-</div>
-
----
-
-## 🎯 **The Problem**
-
-Your secrets are scattered across `.env` files, hardcoded in containers, or stored in insecure locations. One leaked repository = game over.
-
-## ⚡ **The Solution**
-
-AWSENV transforms AWS Parameter Store into your centralized, encrypted secret management system with military-grade security and zero-config magic.
+## ⚡ Quick Start
 
 ```bash
-# Instead of this dangerous pattern:
-docker run -e DATABASE_PASSWORD=plaintext123 myapp
-
-# Do this (pure magic):
-awsenv init      # One-time setup with smart namespaces
-$(awsenv) && docker run myapp  # ← Auto-detects everything!
-```
-
-## 🏆 **Why Fortune 500 Companies Choose AWSENV**
-
-| Traditional Approach | AWSENV |
-|---------------------|---------|
-| 🔴 Secrets in plain text | 🟢 End-to-end encryption |
-| 🔴 Manual secret rotation | 🟢 Automated with AWS |
-| 🔴 No audit trail | 🟢 Complete CloudTrail logging |
-| 🔴 Environment sprawl | 🟢 Centralized management |
-| 🔴 Security breaches | 🟢 Zero secret exposure |
-
-## ⚡ **30-Second Setup**
-
-```bash
-# Install globally
+# Install
 npm i -g @vitta-health/awsenv
 
-# Authenticate with AWS (choose one method):
-aws configure                    # Option 1: AWS CLI
-export AWS_PROFILE=production   # Option 2: AWS Profile  
-# Option 3: IAM Role (ECS/EC2)   - Zero config required!
+# Setup with AWS CLI profiles (zero-config)
+awsenv init                           # Creates project config
+awsenv --profile production           # Fetch parameters
 
-# Start using with zero config magic:
-awsenv init      # Creates smart config: /awsenv/app=my-project/env=production
-awsenv           # ← Auto-detects default profile and works!
+# Or direct usage
+awsenv -n /production/myapp           # Fetch from namespace
+$(awsenv -n /prod/api) && node app.js # Inject into environment
+
+# Sync .env TO Parameter Store
+awsenv --sync .env -n /prod/api --dry-run    # Preview upload
+awsenv --sync .env -n /prod/api --all-secure # Upload encrypted
+```
+
+## 🔧 Configuration
+
+### AWS CLI Profiles
+```bash
+# Uses standard AWS CLI configuration
+~/.aws/credentials      # AWS credentials
+~/.aws/config          # AWS regions/settings
+.awsenv/config         # AWSENV project settings
+```
+
+### Project Config (.awsenv/config)
+```ini
+[production]
+namespace = /awsenv/app=myproject/env=production
+all_secure = true
+
+[staging]  
+namespace = /awsenv/app=myproject/env=staging
+```
+
+## 📋 Examples
+
+### Fetch Parameters
+```bash
+awsenv -n /prod/payments-api          # Basic fetch
+awsenv --profile prod -w              # Without 'export' prefix
+awsenv -r us-west-2 -n /global/config # Specific region
+```
+
+### Sync to Parameter Store
+```bash
+awsenv --sync .env -n /prod/api --dry-run     # Preview changes
+awsenv --sync .env -n /prod/api --all-secure  # Force all encrypted
+awsenv --sync prod.env -n /prod/api --force   # Skip confirmations
+```
+
+### Docker Integration
+```bash
+$(awsenv -n /prod/api) && docker run myapp
+docker run --env-file <(awsenv -n /prod/api -w) myapp
 ```
 
 ## 🔐 **Authentication Guide**
@@ -148,7 +158,7 @@ $(awsenv -n /company/staging/payments-api) && kubectl apply -f k8s/
 # Production (auto-injected via IAM role)
 $(awsenv -n /company/prod/payments-api) && ./start.sh
 ```
-*"Reduced secret management overhead by 80% across 50+ microservices"* - DevOps Lead, Fortune 500
+*"Reduced secret management overhead by 80% across 50+ microservices"* - DevOps Lead
 
 ### **💳 Fintech: SOX/PCI Compliance**
 ```bash
