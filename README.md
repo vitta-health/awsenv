@@ -135,84 +135,39 @@ awsenv          # ← Works instantly! Auto-detects default profile
 - **Enterprise Isolation**: Per-project configuration prevents cross-contamination between environments
 - **AWS Native Integration**: Seamlessly integrates with existing AWS CLI profiles and IAM roles
 
-## 🌟 **Real-World Use Cases**
+## 📚 Examples & Use Cases
 
-### **🚀 Startup: Rapid Development**
+### Basic Usage
 ```bash
-# Local development
+# Load environment variables
+$(awsenv -n /staging/my-api)
+node server.js  # server.js can access process.env.DATABASE_URL
+
+# Generate .env file
+awsenv -n /production/web --without-exporter > .env
+docker run --env-file .env my-app:latest
+```
+
+### Multi-Environment Workflow
+```bash
+# Development
 awsenv -n /dev/myapp > .env && npm run dev
 
-# Deploy to production
-$(awsenv -n /prod/myapp) && npm start
+# Staging with Docker Compose
+$(awsenv -n /staging/payments-api) && docker-compose up
+
+# Production with Kubernetes
+$(awsenv -n /prod/payments-api) && kubectl apply -f k8s/
 ```
-*"Went from scattered .env files to centralized secrets in 10 minutes"* - CTO, Fintech Startup
 
-### **🏢 Enterprise: Multi-Environment Management** 
+### Compliance & Security
 ```bash
-# Development team
-$(awsenv -n /company/dev/payments-api) && docker-compose up
+# Sync with all secrets encrypted for compliance
+awsenv --sync .env.prod -n /fintech/prod/core --all-secure
 
-# Staging deployment  
-$(awsenv -n /company/staging/payments-api) && kubectl apply -f k8s/
-
-# Production (auto-injected via IAM role)
-$(awsenv -n /company/prod/payments-api) && ./start.sh
-```
-*"Reduced secret management overhead by 80% across 50+ microservices"* - DevOps Lead
-
-### **💳 Fintech: SOX/PCI Compliance**
-```bash
-# All secrets encrypted, audit trails automatic
-awsenv --sync .env.prod --namespace /fintech/prod/core --all-secure
-
-# Role-based access control
-awsenv -n /fintech/prod/core  # Only works with proper IAM role
-```
-*"Passed SOX audit with zero security findings"* - CISO, Payment Processor
-
-### **🏥 Healthcare: HIPAA-Ready**
-```bash
-# PHI-compliant secret management
+# HIPAA-compliant deployment
 export AWS_PROFILE=hipaa-compliant
 awsenv -n /healthcare/prod/patient-api --all-secure
-```
-*"AWSENV helped us achieve HIPAA compliance effortlessly"* - CTO, HealthTech
-
-### **🐳 Docker/Kubernetes Production**
-```bash
-# Dockerfile
-FROM node:18-alpine
-RUN npm install -g @vitta-health/awsenv
-CMD $(awsenv -n $NAMESPACE) && npm start
-
-# Kubernetes Deployment
-apiVersion: apps/v1
-kind: Deployment
-spec:
-  template:
-    spec:
-      serviceAccountName: app-service-account  # with IAM role
-      containers:
-      - name: app
-        env:
-        - name: NAMESPACE
-          value: "/production/my-app"
-        command: ["sh", "-c", "$(awsenv -n $NAMESPACE) && npm start"]
-```
-
-### **⚡ CI/CD Pipeline Integration**
-```yaml
-# GitHub Actions
-- name: Deploy to Production
-  env:
-    AWS_ROLE_ARN: arn:aws:iam::123:role/GitHubActions
-  run: |
-    $(awsenv -n /production/api) && ./deploy.sh
-
-# GitLab CI
-deploy:production:
-  script:
-    - $(awsenv -n /production/api) && helm upgrade app ./chart
 ```
 
 ## 🔄 **Bi-Directional Sync: Push & Pull**
@@ -486,33 +441,9 @@ spec:
         - "$(awsenv) && npm start"
 ```
 
-## 🔍 Examples
-
-### Load and use environment variables
-
-```bash
-# Load environment variables
-$(awsenv -r us-east-1 -n /staging/my-api)
-
-# Now you can use them
-echo "Connecting to: $DATABASE_URL"
-node server.js  # server.js can access process.env.DATABASE_URL
-```
-
-### Generate environment file for Docker
-
-```bash
-# Generate .env file
-awsenv --without-exporter -r us-east-1 -n /production/web > .env
-
-# Use with Docker
-docker run --env-file .env my-app:latest
-```
-
-### CI/CD Pipeline Integration
-
+### CI/CD Integration
 ```yaml
-# GitHub Actions example
+# GitHub Actions
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -523,14 +454,15 @@ jobs:
         role-to-assume: arn:aws:iam::123456789:role/GitHubActions
         aws-region: us-east-1
     
-    - name: Load environment variables
-      run: |
-        npm install -g pnpm && pnpm add -g @vitta-health/awsenv
-        awsenv --without-exporter -n /production/my-app > .env
-        
     - name: Deploy with environment
       run: |
-        docker run --env-file .env my-app:latest
+        npm install -g @vitta-health/awsenv
+        $(awsenv -n /production/api) && ./deploy.sh
+
+# GitLab CI
+deploy:production:
+  script:
+    - $(awsenv -n /production/api) && helm upgrade app ./chart
 ```
 
 ## 🧪 Testing & Quality
