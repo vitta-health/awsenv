@@ -32,7 +32,14 @@ function parseAwsConfigFile(filePath) {
       const keyValueMatch = trimmed.match(/^([^=]+)\s*=\s*(.*)$/);
       if (keyValueMatch && currentProfile) {
         const key = keyValueMatch[1].trim();
-        const value = keyValueMatch[2].trim();
+        let value = keyValueMatch[2].trim();
+        
+        // Remove surrounding quotes if present (single or double)
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        
         profiles[currentProfile][key] = value;
       }
     }
@@ -136,8 +143,12 @@ export function applyProfile(params, profileName) {
     // Remove any trailing slashes from namespace
     result.namespace = awsenvConfig.namespace.replace(/\/+$/, '');
   }
+  // Support both encrypt and all_secure (backward compatibility)
   if (awsenvConfig.encrypt !== undefined) {
     result.encrypt = awsenvConfig.encrypt === 'true';
+  } else if (awsenvConfig.all_secure !== undefined) {
+    // Backward compatibility with old all_secure setting
+    result.encrypt = awsenvConfig.all_secure === 'true';
   }
   if (awsenvConfig.without_exporter !== undefined) {
     result.withoutExporter = awsenvConfig.without_exporter === 'true';
