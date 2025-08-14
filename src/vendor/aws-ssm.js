@@ -10,18 +10,33 @@ export default class AwsSsm {
   static async getParametersByPath(region = 'us-east-1', path) {
     const client = new SSMClient({ region });
     
-    const command = new GetParametersByPathCommand({
-      Path: path,
-      Recursive: true,
-      WithDecryption: true
-    });
+    let allParameters = [];
+    let nextToken = undefined;
+    
+    // Paginate through all results (AWS returns max 10 by default)
+    do {
+      const command = new GetParametersByPathCommand({
+        Path: path,
+        Recursive: true,
+        WithDecryption: true,
+        MaxResults: 10, // AWS SSM max is 10 per request
+        NextToken: nextToken
+      });
 
-    try {
-      const response = await client.send(command);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+      try {
+        const response = await client.send(command);
+        if (response.Parameters) {
+          allParameters = allParameters.concat(response.Parameters);
+        }
+        nextToken = response.NextToken;
+      } catch (error) {
+        throw error;
+      }
+    } while (nextToken);
+    
+    return {
+      Parameters: allParameters
+    };
   }
 
   static async putParameter(region = 'us-east-1', parameter) {

@@ -78,37 +78,6 @@ describe('CLI entry point execution', () => {
     exitSpy.mockRestore();
   });
 
-  test.skip('should configure CLI options and parse arguments - needs update for new commands', async () => {
-    // Set up argv to have some arguments
-    process.argv = ['node', '/path/to/script', '--namespace', '/test/app'];
-    
-    // Mock the parsing to return some parameters
-    mockArgs.parse.mockReturnValue({
-      namespace: '/test/app',
-      region: 'us-east-1'
-    });
-
-    // Import the CLI module to trigger execution
-    await import('../src/index.js');
-
-    // Verify that args was configured with all the options
-    expect(mockArgs.option).toHaveBeenCalledWith('region', expect.any(String));
-    expect(mockArgs.option).toHaveBeenCalledWith('namespace', expect.any(String), null);
-    expect(mockArgs.option).toHaveBeenCalledWith('without-exporter', expect.any(String));
-    expect(mockArgs.option).toHaveBeenCalledWith('sync', expect.any(String));
-    expect(mockArgs.option).toHaveBeenCalledWith('dry-run', expect.any(String));
-    expect(mockArgs.option).toHaveBeenCalledWith('force', expect.any(String));
-    expect(mockArgs.option).toHaveBeenCalledWith('all-secure', expect.any(String));
-
-    // Verify that args.parse was called
-    expect(mockArgs.parse).toHaveBeenCalledWith(process.argv, { name: 'awsenv' });
-
-    // Verify that the app function was called with parsed parameters
-    expect(mockApp).toHaveBeenCalledWith({
-      namespace: '/test/app',
-      region: 'us-east-1'
-    });
-  });
 
   test('should show help when no arguments and no env vars', async () => {
     // Set minimal argv
@@ -152,27 +121,6 @@ describe('CLI entry point execution', () => {
     expect(mockApp).toHaveBeenCalledWith({});
   });
 
-  test.skip('should not show help when sync parameter is provided - sync is now a command', async () => {
-    // Set minimal argv
-    process.argv = ['node', '/path/to/script'];
-    
-    // Clear environment variables
-    delete process.env.AWSENV_NAMESPACE;
-    
-    // Mock parsing to return sync parameter
-    mockArgs.parse.mockReturnValue({
-      sync: '.env'
-    });
-
-    // Import the CLI module to trigger execution
-    await import('../src/index.js');
-
-    // Should not show help
-    expect(mockArgs.showHelp).not.toHaveBeenCalled();
-    
-    // Should call app function
-    expect(mockApp).toHaveBeenCalledWith({ sync: '.env' });
-  });
 
   test('should handle complex CLI arguments', async () => {
     // Set argv with multiple arguments

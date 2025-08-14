@@ -93,14 +93,15 @@ class EnvPurge {
       'Parameters to be deleted:',
     ];
 
-    // Show first 10 parameters
-    const preview = parameterNames.slice(0, 10);
+    // Show parameters (limit to 20 for readability)
+    const displayLimit = 20;
+    const preview = parameterNames.slice(0, displayLimit);
     preview.forEach(name => {
       confirmMessages.push(`  - ${name}`);
     });
     
-    if (parameterNames.length > 10) {
-      confirmMessages.push(`  ... and ${parameterNames.length - 10} more`);
+    if (parameterNames.length > displayLimit) {
+      confirmMessages.push(`  ... and ${parameterNames.length - displayLimit} more parameters`);
     }
 
     confirmMessages.push('');
@@ -116,19 +117,11 @@ class EnvPurge {
         output: process.stdout
       });
 
-      // First confirmation
-      rl.question('Are you absolutely sure? Type "yes" to continue: ', (answer1) => {
-        if (answer1.toLowerCase() !== 'yes') {
-          rl.close();
-          resolve(false);
-          return;
-        }
-
-        // Second confirmation with namespace
-        rl.question(`Type the namespace "${this.namespace}" to confirm deletion: `, (answer2) => {
-          rl.close();
-          resolve(answer2 === this.namespace);
-        });
+      // Simple confirmation with default to No
+      rl.question('Are you absolutely sure? (N/y): ', (answer) => {
+        rl.close();
+        // Only proceed if user explicitly types 'y' or 'yes'
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
       });
     });
   }

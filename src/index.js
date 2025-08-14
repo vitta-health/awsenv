@@ -111,7 +111,7 @@ if (process.argv[2] === 'sync') {
 
 args
   .option('region', OPTION_REGION_DESCRIPTION)
-  .option('namespace', OPTION_NAMESPACE_DESCRIPTION, null)
+  .option('namespace', OPTION_NAMESPACE_DESCRIPTION)
   .option('without-exporter', OPTION_WITHOUT_EXPORTER_DESCRIPTION)
   .option('profile', OPTION_PROFILE_DESCRIPTION)
   .option('verbose', OPTION_VERBOSE_DESCRIPTION)

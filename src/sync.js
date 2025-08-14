@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import pLimit from 'p-limit';
+import { parseEnvContent } from './lib/env-parser.js';
 import {
   SYNC_CANCELLED_MSG,
   SYNC_DRY_RUN_MSG,
@@ -41,28 +42,8 @@ class EnvSync {
     }
     
     try {
-      const envVars = {};
-      const lines = content.split('\n');
-      
-      for (let line of lines) {
-        line = line.trim();
-        if (!line || line.startsWith('#')) {
-          continue;
-        }
-        
-        // Handle KEY=VALUE format
-        const match = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/i);
-        if (match) {
-          const [, key, value] = match;
-          // Remove surrounding quotes if present
-          let cleanValue = value.trim();
-          if ((cleanValue.startsWith('"') && cleanValue.endsWith('"')) ||
-              (cleanValue.startsWith("'") && cleanValue.endsWith("'"))) {
-            cleanValue = cleanValue.slice(1, -1);
-          }
-          envVars[key] = cleanValue;
-        }
-      }
+      // Use the robust parser from lib/env-parser.js
+      const envVars = parseEnvContent(content);
       
       if (global.verbose) {
         const varInfo = [`  Found ${Object.keys(envVars).length} variables:`];

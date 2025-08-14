@@ -49,7 +49,7 @@ describe('EnvSync class', () => {
     
     expect(envSync.region).toBe('us-east-1');
     expect(envSync.dryRun).toBe(false);
-    expect(envSync.force).toBe(false);
+    expect(envSync.encrypt).toBe(false);
     expect(envSync.filePath).toBe('.env');
   });
 
@@ -58,7 +58,6 @@ describe('EnvSync class', () => {
       region: 'eu-west-1',
       namespace: '/test/app',
       dryRun: true,
-      force: true,
       encrypt: true,
       filePath: 'custom.env'
     };
@@ -67,7 +66,6 @@ describe('EnvSync class', () => {
     expect(envSync.region).toBe('eu-west-1');
     expect(envSync.namespace).toBe('/test/app');
     expect(envSync.dryRun).toBe(true);
-    expect(envSync.force).toBe(true);
     expect(envSync.encrypt).toBe(true);
     expect(envSync.filePath).toBe('custom.env');
   });
@@ -208,10 +206,9 @@ PORT=3000`;
     expect(() => envSync.displayDryRun(parameters)).not.toThrow();
   });
 
-  test('should return true for askConfirmation when force is enabled', async () => {
-    const envSync = new EnvSync({ force: true });
-    const result = await envSync.askConfirmation();
-    expect(result).toBe(true);
+  test('should handle envContent option for stdin input', () => {
+    const envSync = new EnvSync({ envContent: 'KEY=value' });
+    expect(envSync.envContent).toBe('KEY=value');
   });
 
 
@@ -488,7 +485,7 @@ SPACES=" spaced value "`;
       consoleSpy.mockRestore();
     });
 
-    test('should handle user cancellation', async () => {
+    test('should upload directly without confirmation', async () => {
       const envSync = new EnvSync({
         region: 'us-east-1',
         namespace: '/test/app',
@@ -498,16 +495,18 @@ SPACES=" spaced value "`;
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue('NODE_ENV=production');
       
-      // Mock user selecting "no"
-      envSync.askConfirmation = vi.fn().mockResolvedValue(false);
+      // Mock successful upload
+      AwsSsm.putParameter.mockResolvedValue({ Version: 1 });
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => {});
 
       await envSync.sync();
 
-      expect(AwsSsm.putParameter).not.toHaveBeenCalled();
+      expect(AwsSsm.putParameter).toHaveBeenCalled();
       
       consoleSpy.mockRestore();
+      stdoutSpy.mockRestore();
     });
 
     test('should complete successful sync', async () => {
@@ -520,9 +519,6 @@ SPACES=" spaced value "`;
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue('NODE_ENV=production\nAPI_SECRET=secret-123');
       
-      // Mock user confirming
-      envSync.askConfirmation = vi.fn().mockResolvedValue(true);
-      
       // Mock successful upload
       AwsSsm.putParameter.mockResolvedValue({ Version: 1 });
 
@@ -531,6 +527,7 @@ SPACES=" spaced value "`;
 
       await envSync.sync();
 
+      expect(AwsSsm.putParameter).toHaveBeenCalledTimes(2);
       
       consoleSpy.mockRestore();
       stdoutSpy.mockRestore();
@@ -546,21 +543,28 @@ SPACES=" spaced value "`;
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue('NODE_ENV=production\nAPI_SECRET=secret-123');
       
-      envSync.askConfirmation = vi.fn().mockResolvedValue(true);
-      
       // Mock mixed results
       AwsSsm.putParameter
         .mockResolvedValueOnce({ Version: 1 })
         .mockRejectedValueOnce(new Error('Parameter already exists'));
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`process.exit(${code})`);
+      });
 
-      await envSync.sync();
+      try {
+        await envSync.sync();
+      } catch (error) {
+        expect(error.message).toBe('process.exit(1)');
+      }
 
+      expect(AwsSsm.putParameter).toHaveBeenCalledTimes(2);
       
       consoleSpy.mockRestore();
       stdoutSpy.mockRestore();
+      exitSpy.mockRestore();
     });
 
     test('should handle sync errors and exit', async () => {
