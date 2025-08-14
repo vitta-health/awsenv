@@ -10,20 +10,20 @@ AWSENV is a Node.js CLI tool that securely fetches environment variables from AW
 
 ### Build
 ```bash
-npm run build
+pnpm run build
 ```
 Builds executable binaries using `pkg` and places them in `./releases/` directory for Linux, macOS, and Windows.
 
 ### Testing
 ```bash
-npm test          # Or pnpm test
-npm run test      # Run full test suite (98 tests)
+pnpm test          # Run full test suite (98 tests)
+pnpm run test      # Alternative syntax
 ```
 Uses Vitest framework with ES6 modules. All tests must pass before commits.
 
 ### Development Setup
 ```bash
-npm link
+pnpm link --global
 awsenv version  # Test that it's working
 ```
 

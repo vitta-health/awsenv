@@ -1,7 +1,9 @@
 #!/bin/bash
 # AWSENV Installation Script
 
-echo "Installing AWSENV globally..."
-npm install -g releases/awsenv-1.2.4.tar.gz
+VERSION=$(node -p "require('./package.json').version")
+
+echo "Installing AWSENV v$VERSION globally..."
+pnpm add -g "./releases/awsenv-${VERSION}.tgz"
 echo "✅ AWSENV installed successfully!"
 echo "Run 'awsenv --help' to get started"

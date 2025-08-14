@@ -20,21 +20,15 @@
     "url": "https://github.com/developers-vitta/awsenv/issues"
   },
   "scripts": {
-    "build": "node scripts/build-all.js",
-    "build:npm": "node scripts/build-dist.js",
-    "build:binaries": "node scripts/build-binaries.js",
-    "build:optimized": "node scripts/build-optimized.js",
-    "build:rollup": "node scripts/build-with-rollup.js",
-    "build:babel": "node scripts/build-with-babel.js",
-    "build:wasm": "node scripts/build-wasm.js",
-    "build:pkg": "pkg . --out-path ./releases && chmod +x ./releases/*",
+    "build": "node scripts/build.js",
+    "build:dist": "node scripts/build.js dist",
+    "build:binaries": "node scripts/build.js binaries",
+    "build:clean": "node scripts/build.js clean",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "dev": "node --experimental-modules src/index.js",
-    "clean": "rm -rf node_modules coverage releases",
-    "sync-example": "node --experimental-modules src/index.js --sync .env.example --namespace /test/sync --dry-run"
+    "dev": "node src/index.js",
+    "clean": "rm -rf node_modules coverage releases"
   },
   "packageManager": "pnpm@8.0.0",
   "vitest": {
@@ -66,13 +60,13 @@
   },
   "pkg": {
     "targets": [
-      "node18-linux-x64",
-      "node18-macos-x64",
-      "node18-win-x64"
+      "node22-linux-x64",
+      "node22-macos-x64",
+      "node22-win-x64"
     ]
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",

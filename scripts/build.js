@@ -1,118 +1,137 @@
 #!/usr/bin/env node
 
-import { build } from 'esbuild';
+import args from 'args';
 import { exec } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { promisify } from 'util';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const execAsync = promisify(exec);
 
-async function buildBinary() {
-  console.log('🔨 Building AWSENV binaries...\n');
+const VERSION = JSON.parse(await fs.readFile('./package.json', 'utf8')).version;
+const RELEASE_DIR = './releases';
 
-  // Create releases directory
-  await fs.mkdir('./releases', { recursive: true });
+// Configure args
+args
+  .command('all', 'Build everything (default)', buildAll, ['a'])
+  .command('dist', 'Build distribution package', buildDist, ['d'])
+  .command('binaries', 'Build executable binaries', buildBinaries, ['b'])
+  .command('clean', 'Clean build artifacts', clean, ['c']);
 
-  // Bundle the ES6 code into a single CommonJS file
-  console.log('📦 Bundling with esbuild...');
-  await build({
-    entryPoints: ['./index.js'],
-    bundle: true,
-    platform: 'node',
-    target: 'node18',
-    format: 'cjs',
-    outfile: './releases/awsenv-bundled.cjs',
-    external: ['@aws-sdk/client-ssm'],
-    banner: {
-      js: '#!/usr/bin/env node\n'
-    },
-    minify: true
-  });
+// Parse arguments
+const flags = args.parse(process.argv, { value: false, exit: false });
 
-  console.log('✅ Bundle created: ./releases/awsenv-bundled.cjs\n');
-
-  // Create package.json for pkg
-  const pkgJson = {
-    name: "awsenv-binary",
-    version: "1.2.4",
-    main: "awsenv-bundled.cjs",
-    dependencies: {
-      "@aws-sdk/client-ssm": "^3.864.0"
-    },
-    pkg: {
-      targets: [
-        "node18-linux-x64",
-        "node18-macos-x64", 
-        "node18-win-x64"
-      ],
-      outputPath: "."
-    }
-  };
-
-  await fs.writeFile(
-    './releases/package.json',
-    JSON.stringify(pkgJson, null, 2)
-  );
-
-  // Copy node_modules to releases directory for pkg
-  console.log('📋 Preparing dependencies...');
-  await execAsync('cp -r node_modules ./releases/');
-
-  // Build binaries with pkg
-  console.log('🚀 Building binaries with pkg...\n');
-  
-  try {
-    const { stdout, stderr } = await execAsync(
-      'cd releases && npx pkg . --out-path . --targets node18-linux-x64,node18-macos-x64,node18-win-x64',
-      { maxBuffer: 10 * 1024 * 1024 }
-    );
-    
-    if (stdout) console.log(stdout);
-    if (stderr && !stderr.includes('Warning')) console.error(stderr);
-  } catch (error) {
-    console.error('Error building binaries:', error.message);
-    process.exit(1);
-  }
-
-  // Rename binaries
-  console.log('📝 Renaming binaries...');
-  const renames = [
-    { from: 'awsenv-binary-linux', to: 'awsenv-linux' },
-    { from: 'awsenv-binary-macos', to: 'awsenv-macos' },
-    { from: 'awsenv-binary-win.exe', to: 'awsenv-win.exe' }
-  ];
-
-  for (const { from, to } of renames) {
-    const fromPath = path.join('./releases', from);
-    const toPath = path.join('./releases', to);
-    
-    try {
-      await fs.access(fromPath);
-      await fs.rename(fromPath, toPath);
-      console.log(`  ✓ ${to}`);
-    } catch (err) {
-      // Binary might not exist for this platform
-    }
-  }
-
-  // Clean up temporary files
-  console.log('\n🧹 Cleaning up...');
-  await fs.rm('./releases/node_modules', { recursive: true, force: true });
-  await fs.rm('./releases/package.json', { force: true });
-  await fs.rm('./releases/awsenv-bundled.cjs', { force: true });
-
-  // Make binaries executable
-  await execAsync('chmod +x ./releases/awsenv-*');
-
-  // List final binaries
-  console.log('\n✅ Build complete! Binaries created:\n');
-  const files = await fs.readdir('./releases');
-  for (const file of files) {
-    const stats = await fs.stat(path.join('./releases', file));
-    const size = (stats.size / 1024 / 1024).toFixed(2);
-    console.log(`  📦 ${file} (${size} MB)`);
-  }
+// If no command specified, run build all
+if (!args.sub || args.sub.length === 0) {
+  await buildAll();
+  process.exit(0);
 }
 
-buildBinary().catch(console.error);
+// Command implementations
+async function buildAll() {
+  console.log(`🚀 AWSENV Build v${VERSION}\n`);
+  
+  await clean();
+  await buildDist();
+  await buildBinaries();
+  
+  console.log('\n✅ Build complete!');
+  console.log(`📁 Artifacts in: ${RELEASE_DIR}/`);
+}
+
+async function clean() {
+  console.log('🧹 Cleaning...');
+  await fs.rm(RELEASE_DIR, { recursive: true, force: true });
+  await fs.mkdir(RELEASE_DIR, { recursive: true });
+  console.log('  ✓ Clean complete');
+}
+
+async function buildDist() {
+  console.log('\n📦 Building distribution package...');
+  
+  const distDir = `${RELEASE_DIR}/dist`;
+  await fs.mkdir(distDir, { recursive: true });
+  
+  // Copy core files
+  const files = ['index.js', 'package.json', 'README.md'];
+  for (const file of files) {
+    await fs.copyFile(file, path.join(distDir, file));
+  }
+  
+  // Copy source
+  await execAsync(`cp -r src ${distDir}/`);
+  
+  // Create production package.json
+  const pkg = JSON.parse(await fs.readFile('./package.json', 'utf8'));
+  delete pkg.devDependencies;
+  delete pkg.scripts;
+  pkg.scripts = { start: "node index.js" };
+  
+  await fs.writeFile(`${distDir}/package.json`, JSON.stringify(pkg, null, 2));
+  
+  // Install production deps with pnpm
+  console.log('  Installing production dependencies...');
+  try {
+    await execAsync(`cd ${distDir} && pnpm install --prod`);
+  } catch (err) {
+    // Fallback to npm if pnpm fails
+    console.log('  Fallback to npm...');
+    await execAsync(`cd ${distDir} && npm install --production`);
+  }
+  
+  // Create tarball
+  console.log('  Creating tarball...');
+  await execAsync(`cd ${distDir} && pnpm pack`);
+  await execAsync(`mv ${distDir}/*.tgz ${RELEASE_DIR}/awsenv-${VERSION}.tgz`);
+  
+  console.log(`  ✓ Package created: awsenv-${VERSION}.tgz`);
+}
+
+async function buildBinaries() {
+  console.log('\n💾 Building binaries...');
+  
+  const binDir = `${RELEASE_DIR}/binaries`;
+  await fs.mkdir(binDir, { recursive: true });
+  
+  // Create simple wrapper scripts
+  const platforms = [
+    { name: 'linux-x64', shebang: '#!/usr/bin/env node\n' },
+    { name: 'macos-x64', shebang: '#!/usr/bin/env node\n' },
+    { name: 'windows-x64', ext: '.cmd', content: '@node "%~dp0\\index.js" %*' }
+  ];
+  
+  for (const platform of platforms) {
+    const filename = `awsenv-${platform.name}${platform.ext || ''}`;
+    const filepath = path.join(binDir, filename);
+    
+    if (platform.content) {
+      await fs.writeFile(filepath, platform.content);
+    } else {
+      // Copy index.js with shebang
+      const content = await fs.readFile('./index.js', 'utf8');
+      await fs.writeFile(filepath, content);
+      await execAsync(`chmod +x ${filepath}`);
+    }
+    
+    console.log(`  ✓ ${filename}`);
+  }
+  
+  // Try to build with pkg if available
+  try {
+    console.log('  Building standalone binaries with pkg...');
+    await execAsync('which pkg');
+    await execAsync(`pkg . --out-path ${binDir} --targets node22-linux-x64,node22-macos-x64,node22-win-x64`);
+    
+    // Rename pkg outputs
+    await fs.rename(`${binDir}/awsenv-linux`, `${binDir}/awsenv-linux-x64-standalone`).catch(() => {});
+    await fs.rename(`${binDir}/awsenv-macos`, `${binDir}/awsenv-macos-x64-standalone`).catch(() => {});
+    await fs.rename(`${binDir}/awsenv-win.exe`, `${binDir}/awsenv-windows-x64-standalone.exe`).catch(() => {});
+    
+    console.log('  ✓ Standalone binaries created');
+  } catch {
+    console.log('  ⚠ pkg not available, skipping standalone binaries');
+  }
+}

@@ -7,7 +7,7 @@ Secure AWS Parameter Store integration with zero-config magic.
 ## ⚡ Quick Start
 
 ```bash
-npm i -g @vitta-health/awsenv
+pnpm add -g @vitta-health/awsenv
 
 # Initialize and use
 awsenv init                           # Creates .awsenv config
@@ -52,7 +52,7 @@ encrypt = false
 awsenv -n /prod/api                   # Basic fetch
 awsenv --profile prod                 # Use AWS profile
 awsenv -n /prod/api -w > .env        # Export without 'export'
-$(awsenv -n /prod/api) && npm start  # Direct injection
+$(awsenv -n /prod/api) && pnpm start  # Direct injection
 ```
 
 ### Sync to Parameter Store  
@@ -142,11 +142,11 @@ Use `--encrypt` to force ALL as SecureString.
 ## 🐳 Docker Integration
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 RUN npm install -g @vitta-health/awsenv
 WORKDIR /app
 COPY . .
-CMD $(awsenv -n $AWSENV_NAMESPACE) && npm start
+CMD $(awsenv -n $AWSENV_NAMESPACE) && pnpm start
 ```
 
 ### Docker Compose
@@ -172,7 +172,7 @@ spec:
         env:
         - name: AWSENV_NAMESPACE
           value: "/production/app"
-        command: ["sh", "-c", "$(awsenv) && npm start"]
+        command: ["sh", "-c", "$(awsenv) && pnpm start"]
 ```
 
 ## 📊 Examples
@@ -180,7 +180,7 @@ spec:
 ### Multi-Environment Workflow
 ```bash
 # Development
-awsenv -n /dev/app > .env && npm run dev
+awsenv -n /dev/app > .env && pnpm run dev
 
 # Staging with Docker
 $(awsenv -n /staging/app) && docker-compose up
@@ -204,7 +204,7 @@ awsenv -n /prod/api
 # GitHub Actions
 - name: Deploy
   run: |
-    npm install -g @vitta-health/awsenv
+    pnpm add -g @vitta-health/awsenv
     $(awsenv -n /prod/api) && ./deploy.sh
 ```
 
@@ -248,15 +248,15 @@ awsenv -n /prod/api -w > .env
 # Setup
 git clone https://github.com/developers-vitta/awsenv.git
 cd awsenv
-npm install
-npm link
+pnpm install
+pnpm link --global
 
 # Test (95%+ coverage required)
-npm test
-npm run test:coverage
+pnpm test
+pnpm run test:coverage
 
 # Build
-npm run build
+pnpm run build
 ```
 
 ## 📄 License
