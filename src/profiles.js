@@ -1,6 +1,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+
 function parseAwsConfigFile(filePath) {
   if (!fs.existsSync(filePath)) {
     if (global.verbose) console.log(`  [not found] ${filePath}`);
@@ -67,6 +69,11 @@ function getAwsCliProfiles() {
   const allProfiles = { ...credentialsProfiles };
   
   Object.keys(configProfiles).forEach(profileName => {
+    // Skip SSO sessions - they are not actual profiles
+    if (profileName.startsWith('sso-session')) {
+      return;
+    }
+    
     allProfiles[profileName] = {
       ...allProfiles[profileName],
       ...configProfiles[profileName]
@@ -229,9 +236,9 @@ function generateNamespace(appName, environment = 'production') {
   
   // AWS Parameter Store namespace format
   // Cannot start with /aws or /ssm (AWS restriction)
-  // Using single underscore as separator
+  // Using double underscore as separator
   // Ensure no trailing slashes
-  const namespace = `/envstore/app_${cleanAppName}/env_${cleanEnv}`;
+  const namespace = `/envs/app__${cleanAppName}/env__${cleanEnv}`;
   return namespace.replace(/\/+$/, ''); // Remove any trailing slashes
 }
 
@@ -268,9 +275,21 @@ namespace = ${generateNamespace(appName, 'production')}
 encrypt = true
 paranoid = true`);
   
-  // Add sections for each AWS CLI profile found
+  // Add sections for each AWS CLI profile found (excluding SSO sessions and duplicates)
   if (availableProfiles.length > 0) {
+    const addedProfiles = new Set(['default']); // Track already added profiles
+    
     availableProfiles.forEach(profile => {
+      // Skip SSO sessions and already added profiles
+      if (profile.startsWith('sso-session') || addedProfiles.has(profile)) {
+        return;
+      }
+      
+      // Skip if it's the default profile (already added above)
+      if (profile === 'default') {
+        return;
+      }
+      
       // Try to guess environment from profile name
       let env = 'production';
       if (profile.includes('dev') || profile.includes('development')) {
@@ -285,6 +304,8 @@ paranoid = true`);
 namespace = ${generateNamespace(appName, env)}
 encrypt = ${env === 'production' ? 'true' : 'false'}
 paranoid = ${env === 'production' ? 'true' : 'false'}`);
+      
+      addedProfiles.add(profile);
     });
   } else {
     // If no AWS profiles, add example sections
@@ -327,8 +348,8 @@ ${configSections.join('\n\n')}
 # Available AWS CLI profiles on this system:
 ${availableProfiles.length > 0 ? availableProfiles.map(p => `# - ${p}`).join('\n') : '# (none found - run "aws configure" to create one)'}
 
-# Namespace format: /envstore/app_{app-name}/env_{environment}
-# Example: /envstore/app_myapp/env_production, /envstore/app_myapp/env_staging
+# Namespace format: /envs/app__{app-name}/env__{environment}
+# Example: /envs/app__myapp/env__production, /envs/app__myapp/env__staging
 `;
 
   fs.writeFileSync(configFile, smartConfig);
@@ -337,12 +358,22 @@ ${availableProfiles.length > 0 ? availableProfiles.map(p => `# - ${p}`).join('\n
   console.log(`📁 Config file: ${configFile}`);
   
   if (availableProfiles.length > 0) {
-    console.log('\n📝 Configuration sections created for AWS CLI profiles:');
+    console.log('\n📝 Configuration sections created:');
     console.log('   • [default] - fallback configuration');
-    availableProfiles.forEach(p => console.log(`   • [${p}] - matches AWS CLI profile "${p}"`));
+    
+    // Only show non-default profiles that were actually added
+    const nonDefaultProfiles = availableProfiles.filter(p => 
+      p !== 'default' && !p.startsWith('sso-session')
+    );
+    
+    nonDefaultProfiles.forEach(p => 
+      console.log(`   • [${p}] - matches AWS CLI profile "${p}"`)
+    );
     
     console.log('\n🚀 Usage:');
-    console.log(`   awsenv --profile ${availableProfiles[0]}`);
+    if (nonDefaultProfiles.length > 0) {
+      console.log(`   awsenv --profile ${nonDefaultProfiles[0]}`);
+    }
     console.log('   awsenv  # uses [default] section\n');
     
     console.log('💡 Important: Profile names must match AWS CLI profiles exactly!\n');

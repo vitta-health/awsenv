@@ -222,7 +222,7 @@ region = us-west-2`;
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       '/project/.awsenv',
-      expect.stringContaining('namespace = /envstore/app_project/env_production')
+      expect.stringContaining('namespace = /envs/app__project/env__production')
     );
     // Console output tests removed since console.log statements were removed
   });

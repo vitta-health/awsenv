@@ -1,7 +1,8 @@
 import args from 'args';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';  
+import { fileURLToPath } from 'url';
+
 import app from './app.js';
 import {
   OPTION_ENCRYPT_DESCRIPTION,
@@ -14,11 +15,21 @@ import {
   OPTION_WITHOUT_EXPORTER_DESCRIPTION,
 } from './concerns/msgs.js';
 import { applyProfile, createExampleConfig, listProfiles } from './profiles.js';
+import EnvPurge from './purge.js';
+import EnvSync from './sync.js';
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (!process.mainModule) {
   process.mainModule = { filename: __filename };
+}
+
+// Handle version command early
+if (process.argv[2] === 'version' || process.argv.includes('--version') || process.argv.includes('-V')) {
+  console.log(typeof __VERSION__ !== 'undefined' ? __VERSION__ : '1.2.4');
+  process.exit(0);
 }
 
 // Handle purge command early (before args tries to spawn subprocess)
@@ -117,6 +128,11 @@ args
   .option('verbose', OPTION_VERBOSE_DESCRIPTION)
   .option('paranoid', 'Block destructive operations like purge');
 
+// Set version explicitly for compiled binaries
+if (args.config) {
+  args.config.version = typeof __VERSION__ !== 'undefined' ? __VERSION__ : '1.2.4';
+}
+
 // Add sync options if sync command is being used
 if (global.runSync) {
   args
@@ -137,7 +153,10 @@ args
   .command('sync', 'Sync environment variables to AWS Parameter Store')
   .command('purge', 'Delete ALL parameters from namespace (DESTRUCTIVE)');
 
-const params = args.parse(process.argv, { name: 'awsenv' });
+const params = args.parse(process.argv, { 
+  name: 'awsenv',
+  version: typeof __VERSION__ !== 'undefined' ? __VERSION__ : '1.2.4' 
+});
 
 // Set global verbose flag
 global.verbose = params.verbose || false;
@@ -236,8 +255,7 @@ if (global.runSync) {
       console.log(syncInfo.join('\n'));
     }
     
-    // Import sync module
-    const { default: EnvSync } = await import('./sync.js');
+    // Use imported EnvSync module
     
     // Check for input source
     let envContent = null;
@@ -369,8 +387,7 @@ if (global.runSync) {
       console.log(purgeInfo.join('\n'));
     }
     
-    // Import purge module
-    const { default: EnvPurge } = await import('./purge.js');
+    // Use imported EnvPurge module
     
     // Apply profile if needed
     let finalPurgeParams = mergedParams;

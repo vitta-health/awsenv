@@ -24,6 +24,8 @@
     "build:dist": "node scripts/build.js dist",
     "build:binaries": "node scripts/build.js binaries",
     "build:clean": "node scripts/build.js clean",
+    "build:webpack": "webpack --config config/webpack.config.js",
+    "build:bundle": "node scripts/build-bundle.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -59,7 +61,16 @@
     }
   },
   "pkg": {
-    "scripts": "index.js",
+    "scripts": [
+      "index-cjs.js",
+      "index.js",
+      "src/**/*.js"
+    ],
+    "assets": [
+      "package.json",
+      "index.js",
+      "src/**/*.js"
+    ],
     "targets": [
       "node18-linux-x64",
       "node18-linux-arm64",
@@ -73,9 +84,17 @@
     "node": ">=22.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@babel/preset-env": "^7.28.3",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
-    "vitest": "^3.2.4"
+    "babel-loader": "^10.0.0",
+    "esbuild": "^0.25.9",
+    "vitest": "^3.2.4",
+    "webpack": "^5.101.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-ssm": "^3.864.0",

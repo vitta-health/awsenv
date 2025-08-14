@@ -56,78 +56,8 @@ async function buildDist() {
   
   await fs.mkdir(DIST_DIR, { recursive: true });
   
-  // Check if esbuild is available
-  let hasEsbuild = false;
-  try {
-    await execAsync('npx esbuild --version');
-    hasEsbuild = true;
-  } catch {
-    console.log('  ⚠ esbuild not found, using simple copy');
-  }
-  
-  if (hasEsbuild) {
-    // Bundle with esbuild
-    console.log('  Bundling with esbuild...');
-    
-    // Bundle the main entry point
-    await execAsync(`npx esbuild index.js \
-      --bundle \
-      --platform=node \
-      --target=node20 \
-      --format=esm \
-      --minify \
-      --tree-shaking=true \
-      --external:@aws-sdk/* \
-      --external:fs \
-      --external:path \
-      --external:os \
-      --external:readline \
-      --external:child_process \
-      --external:url \
-      --external:util \
-      --external:process \
-      --outfile=${DIST_DIR}/index.js`);
-    console.log('  ✓ Bundled and minified index.js');
-    
-    // Create minimal package.json
-    const pkg = {
-      name: '@vitta-health/awsenv',
-      version: VERSION,
-      description: 'Secure way to handle environment variables in Docker with AWS Parameter Store',
-      main: 'index.js',
-      type: 'module',
-      bin: {
-        awsenv: './index.js'
-      },
-      engines: {
-        node: '>=22.0.0'
-      },
-      dependencies: {
-        '@aws-sdk/client-ssm': '^3.864.0'
-      },
-      keywords: ['aws', 'env', 'awsenv', 'ssm', 'docker']
-    };
-    
-    await fs.writeFile(`${DIST_DIR}/package.json`, JSON.stringify(pkg, null, 2));
-    console.log('  ✓ Created minimal package.json');
-    
-    // Copy README
-    await fs.copyFile('README.md', `${DIST_DIR}/README.md`);
-    console.log('  ✓ Copied README.md');
-    
-    // Install only production deps
-    console.log('  Installing production dependencies...');
-    await execAsync(`cd ${DIST_DIR} && npm install --production --silent`);
-    console.log('  ✓ Installed @aws-sdk/client-ssm');
-    
-    // Get size info
-    const { stdout: sizeInfo } = await execAsync(`du -sh ${DIST_DIR}`);
-    console.log(`  📊 Distribution size: ${sizeInfo.split('\t')[0]}`);
-    
-  } else {
-    // Fallback to simple copy
-    await simpleCopy();
-  }
+  // Simple copy for npm package
+  await simpleCopy();
   
   // Create npm package
   console.log('\n  Creating npm package...');
@@ -176,24 +106,33 @@ async function buildBinaries() {
   if (hasPkg) {
     console.log('  Building standalone binaries with pkg...');
     
-    // Read pkg config from package.json
-    const pkgJson = JSON.parse(await fs.readFile('./package.json', 'utf8'));
-    const pkgTargets = pkgJson.pkg?.targets || ['node20-linux-x64', 'node20-macos-x64', 'node20-win-x64'];
+    // Use Node 18 targets  
+    const pkgTargets = [
+      'node18-linux-x64',
+      'node18-linux-arm64', 
+      'node18-macos-x64',
+      'node18-macos-arm64',
+      'node18-win-x64'
+    ];
     
     try {
-      // Build binaries from the optimized dist
-      // Using configuration from package.json
-      await execAsync(`pkg ${DIST_DIR}/index.js \
+      // First, build with esbuild to create CJS bundle
+      console.log('  Creating CJS bundle with esbuild...');
+      await execAsync('pnpm run build:bundle');
+      
+      // Then build binaries from the webpack bundle
+      console.log('  Building binaries from webpack bundle...');
+      await execAsync(`pkg ${DIST_DIR}/bundle.cjs \
         --targets ${pkgTargets.join(',')} \
         --out-path ${RELEASES_DIR}`);
       
-      // Rename outputs to have consistent naming
+      // Rename outputs to the specified naming convention
       const renames = [
-        ['index-linux-x64', 'awsenv-linux-x64'],
-        ['index-linux-arm64', 'awsenv-linux-arm64'],
-        ['index-macos-x64', 'awsenv-macos-x64'],
-        ['index-macos-arm64', 'awsenv-macos-arm64'],
-        ['index-win-x64.exe', 'awsenv-windows-x64.exe']
+        ['bundle-linux-x64', 'awsenv-linux'],
+        ['bundle-linux-arm64', 'awsenv-linux-arm64'],
+        ['bundle-macos-x64', 'awsenv-macos'],
+        ['bundle-macos-arm64', 'awsenv-macos-arm64'],
+        ['bundle-win-x64.exe', 'awsenv-win.exe']
       ];
       
       for (const [from, to] of renames) {
