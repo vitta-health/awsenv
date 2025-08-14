@@ -176,28 +176,24 @@ async function buildBinaries() {
   if (hasPkg) {
     console.log('  Building standalone binaries with pkg...');
     
-    // Create temporary package.json for pkg
-    const pkgConfig = JSON.parse(await fs.readFile('./package.json', 'utf8'));
-    pkgConfig.pkg = {
-      scripts: 'dist/index.js',
-      targets: ['node18-linux-x64', 'node18-macos-x64', 'node18-win-x64'],
-      outputPath: RELEASES_DIR
-    };
-    
-    await fs.writeFile('pkg.config.json', JSON.stringify(pkgConfig, null, 2));
+    // Read pkg config from package.json
+    const pkgJson = JSON.parse(await fs.readFile('./package.json', 'utf8'));
+    const pkgTargets = pkgJson.pkg?.targets || ['node20-linux-x64', 'node20-macos-x64', 'node20-win-x64'];
     
     try {
       // Build binaries from the optimized dist
-      // Note: using node18 which is LTS and well-supported by pkg
+      // Using configuration from package.json
       await execAsync(`pkg ${DIST_DIR}/index.js \
-        --targets node18-linux-x64,node18-macos-x64,node18-win-x64 \
+        --targets ${pkgTargets.join(',')} \
         --out-path ${RELEASES_DIR}`);
       
-      // Rename outputs
+      // Rename outputs to have consistent naming
       const renames = [
-        ['index-linux', 'awsenv-linux-x64'],
-        ['index-macos', 'awsenv-macos-x64'],
-        ['index-win.exe', 'awsenv-windows-x64.exe']
+        ['index-linux-x64', 'awsenv-linux-x64'],
+        ['index-linux-arm64', 'awsenv-linux-arm64'],
+        ['index-macos-x64', 'awsenv-macos-x64'],
+        ['index-macos-arm64', 'awsenv-macos-arm64'],
+        ['index-win-x64.exe', 'awsenv-windows-x64.exe']
       ];
       
       for (const [from, to] of renames) {
@@ -208,22 +204,20 @@ async function buildBinaries() {
       }
       
       // Get binary sizes
-      const { stdout: binSizes } = await execAsync(`ls -lh ${RELEASES_DIR}/*.{exe,x64} 2>/dev/null | awk '{print $9 ": " $5}'`);
-      if (binSizes) {
-        console.log('\n  Binary sizes:');
-        binSizes.split('\n').filter(Boolean).forEach(line => {
-          const parts = line.split(':');
-          if (parts.length === 2) {
-            const filename = path.basename(parts[0]);
-            console.log(`    ${filename}: ${parts[1].trim()}`);
-          }
-        });
+      console.log('\n  Binary sizes:');
+      const files = await fs.readdir(RELEASES_DIR);
+      for (const file of files) {
+        if (file.startsWith('awsenv-')) {
+          const stats = await fs.stat(`${RELEASES_DIR}/${file}`);
+          const size = (stats.size / (1024 * 1024)).toFixed(2);
+          console.log(`    ${file}: ${size}MB`);
+        }
       }
       
     } catch (err) {
       console.log(`  ❌ Failed to build binaries: ${err.message}`);
     } finally {
-      // Clean up temp config
+      // Clean up temp config if created
       await fs.unlink('pkg.config.json').catch(() => {});
     }
   } else {

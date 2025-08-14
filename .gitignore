@@ -1,20 +1,4 @@
 node_modules
-.idea/*
-yarn.lock
-.editorconfig
-
-# Test coverage
-coverage/
-
-# Temporary test files (should not be committed)
-test-*.js
-quick-test.js
-*.test.disabled
-
-# Local configuration
-.awsenv
-
-# Build artifacts
-dist/
-releases/
-*.tar.gz
+dist
+coverage
+.claude
