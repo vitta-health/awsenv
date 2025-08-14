@@ -1,5 +1,18 @@
 #!/usr/bin/env node
 
+/**
+ * AWSENV Bundle Builder
+ * 
+ * Uses esbuild to create a single CommonJS bundle from ES6 sources.
+ * This bundle is then compiled to native binaries using pkg.
+ * 
+ * Why esbuild?
+ * - 10x faster than webpack/rollup
+ * - Properly bundles all local modules inline
+ * - Zero configuration needed
+ * - Perfect ES6 → CommonJS transformation
+ */
+
 import * as esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';

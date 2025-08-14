@@ -120,8 +120,8 @@ async function buildBinaries() {
       console.log('  Creating CJS bundle with esbuild...');
       await execAsync('pnpm run build:bundle');
       
-      // Then build binaries from the webpack bundle
-      console.log('  Building binaries from webpack bundle...');
+      // Then build binaries from the esbuild bundle
+      console.log('  Building binaries from esbuild bundle...');
       await execAsync(`pkg ${DIST_DIR}/bundle.cjs \
         --targets ${pkgTargets.join(',')} \
         --out-path ${RELEASES_DIR}`);

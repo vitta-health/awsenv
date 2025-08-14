@@ -8,11 +8,21 @@ AWSENV is a Node.js CLI tool that securely fetches environment variables from AW
 
 ## Commands
 
-### Build
+### Build System
+
+#### Quick Build Commands
 ```bash
-pnpm run build
+pnpm run build        # Complete build (bundle + binaries)
+pnpm run build:bundle # Create CJS bundle with esbuild
+pnpm run build:binaries # Create platform binaries with pkg
 ```
-Builds executable binaries using `pkg` and places them in `./releases/` directory for Linux, macOS, and Windows.
+
+#### Build Process Flow
+1. **Source (ES6)** → `src/index.js` with ES6 modules
+2. **Bundle (CJS)** → `dist/bundle.cjs` via esbuild (~65KB)
+3. **Binaries** → `releases/awsenv-*` via pkg (~50-60MB each)
+
+The build uses esbuild for fast bundling and pkg for creating standalone executables that embed the Node.js runtime.
 
 ### Testing
 ```bash
@@ -180,6 +190,24 @@ namespace = '/path/to/params'          # Single quotes
 namespace = /path/to/params            # No quotes
 namespace = "/path/with spaces/params" # Quotes required for spaces
 ```
+
+## Technical Decisions & Rationale
+
+### Build System: esbuild (única ferramenta de bundling)
+- **Why esbuild**: 10x faster than alternatives, zero configuration needed, perfect ES6→CJS transpilation
+- **Bundle strategy**: Single file output (66KB) that includes all local modules inline
+- **No dynamic imports**: All imports are static to ensure complete bundling
+- **No webpack**: Webpack failed to bundle local modules properly (kept relative requires)
+
+### Namespace Format: `/envs/app__{name}/env__{env}`
+- **Cannot use `/awsenv`**: AWS restricts parameters starting with `/aws` (case-insensitive)
+- **Double underscore**: Clear visual separation between app name and environment
+- **Example**: `/envs/app__myapp/env__production`
+
+### Binary Compilation with pkg
+- **Node 18 targets**: Balance between modern features and compatibility
+- **Embedded runtime**: Each binary includes Node.js runtime (~50MB overhead)
+- **Platform naming**: `awsenv-linux`, `awsenv-macos`, `awsenv-win.exe`
 
 ## Development Standards
 
